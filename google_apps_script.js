@@ -55,15 +55,15 @@ function doPost(e) {
 function handleRequest(e) {
   try {
     const params = e.parameter || {};
-    const action = params.action || '';
     let postData = {};
     
     if (e.postData) {
       try { postData = JSON.parse(e.postData.contents); } catch(err) {}
     }
     
-    // Merge params
+    // Merge params — POST body takes priority
     const data = { ...params, ...postData };
+    const action = data.action || '';
     
     let result;
     
