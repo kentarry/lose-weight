@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FitBurn — 智能減肥追蹤器</title>
+    <meta name="description" content="FitBurn 智能減肥追蹤工具：拍照分析食物熱量、運動紀錄、每日儀表板，讓減肥變得簡單有趣。">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- ========== LOGIN SCREEN ========== -->
+    <div id="loginScreen" class="screen" style="display:none;">
+        <div class="login-container">
+            <div class="login-header">
+                <span class="logo-icon-lg">🔥</span>
+                <h1>FitBurn</h1>
+                <p>智能減肥追蹤器</p>
+            </div>
+
+            <div class="login-card">
+                <div class="login-tabs">
+                    <button class="login-tab active" onclick="App.switchLoginTab('login')">登入</button>
+                    <button class="login-tab" onclick="App.switchLoginTab('register')">註冊</button>
+                </div>
+
+                <div class="login-form" id="loginForm">
+                    <div class="form-group">
+                        <label>使用者帳號</label>
+                        <div class="input-with-icon">
+                            <span class="material-symbols-rounded input-icon">person</span>
+                            <input type="text" id="loginUserId" class="input-field" placeholder="輸入你的帳號...">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-full" id="loginBtn" onclick="App.doLogin()">
+                        <span class="material-symbols-rounded">login</span> 登入
+                    </button>
+                </div>
+
+                <div class="login-form" id="registerForm" style="display:none;">
+                    <div class="form-group">
+                        <label>建立帳號</label>
+                        <div class="input-with-icon">
+                            <span class="material-symbols-rounded input-icon">person_add</span>
+                            <input type="text" id="regUserId" class="input-field" placeholder="輸入帳號（至少2個字元）...">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-full" id="regBtn" onclick="App.doRegister()">
+                        <span class="material-symbols-rounded">how_to_reg</span> 註冊
+                    </button>
+                </div>
+
+                <div class="login-divider"><span>雲端設定</span></div>
+                <div class="form-group">
+                    <label>Google Apps Script 網址</label>
+                    <div class="input-with-icon">
+                        <span class="material-symbols-rounded input-icon">cloud</span>
+                        <input type="text" id="loginScriptUrl" class="input-field" placeholder="貼上你的 Apps Script 部署網址...">
+                    </div>
+                    <p class="input-hint">將 google_apps_script.js 部署到 Google Sheets 後所取得的網址</p>
+                </div>
+
+                <div class="login-divider"><span>或</span></div>
+                <button class="btn btn-secondary btn-full" onclick="App.useOffline()">
+                    <span class="material-symbols-rounded">wifi_off</span> 離線模式（僅本地儲存）
+                </button>
+            </div>
+
+            <div class="login-footer">
+                <p>📋 <a href="#" onclick="App.showSetupGuide();return false;">查看部署教學</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== ONBOARDING SCREEN ========== -->
+    <div id="onboardingScreen" class="screen" style="display:none;">
+        <div class="onboarding">
+            <div class="onboarding-header">
+                <span class="logo-icon-lg">🔥</span>
+                <h1>歡迎使用 FitBurn</h1>
+                <p>讓我們先了解你，打造專屬的減肥計畫</p>
+            </div>
+
+            <div class="step-indicator">
+                <div class="step-dot active" data-step="1"></div>
+                <div class="step-dot" data-step="2"></div>
+                <div class="step-dot" data-step="3"></div>
+                <div class="step-dot" data-step="4"></div>
+            </div>
+
+            <div class="onboarding-step active" data-step="1">
+                <h2>你的性別</h2>
+                <p class="step-desc">性別會影響基礎代謝率的計算</p>
+                <div class="gender-picker">
+                    <button class="gender-option" data-gender="male" onclick="App.selectGender('male')">
+                        <span class="gender-icon">👨</span>
+                        <span class="gender-label">男性</span>
+                    </button>
+                    <button class="gender-option" data-gender="female" onclick="App.selectGender('female')">
+                        <span class="gender-icon">👩</span>
+                        <span class="gender-label">女性</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="onboarding-step" data-step="2">
+                <h2>基本資料</h2>
+                <p class="step-desc">用於精確計算你的每日所需熱量</p>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>年齡</label>
+                        <div class="input-with-unit">
+                            <input type="number" id="obAge" class="input-field" placeholder="25" min="10" max="100">
+                            <span class="input-unit">歲</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-row two-col">
+                    <div class="form-group">
+                        <label>身高</label>
+                        <div class="input-with-unit">
+                            <input type="number" id="obHeight" class="input-field" placeholder="170" min="100" max="250">
+                            <span class="input-unit">cm</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>體重</label>
+                        <div class="input-with-unit">
+                            <input type="number" id="obWeight" class="input-field" placeholder="70" min="30" max="300" step="0.1">
+                            <span class="input-unit">kg</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="onboarding-step" data-step="3">
+                <h2>活動量</h2>
+                <p class="step-desc">你平常的活動程度如何？</p>
+                <div class="activity-list">
+                    <button class="activity-option" data-level="sedentary" onclick="App.selectActivity('sedentary')">
+                        <span class="activity-icon">🪑</span>
+                        <div class="activity-text"><div class="activity-name">久坐</div><div class="activity-desc">幾乎不運動，辦公室工作</div></div>
+                    </button>
+                    <button class="activity-option" data-level="light" onclick="App.selectActivity('light')">
+                        <span class="activity-icon">🚶</span>
+                        <div class="activity-text"><div class="activity-name">輕度活動</div><div class="activity-desc">每週運動 1-3 天</div></div>
+                    </button>
+                    <button class="activity-option" data-level="moderate" onclick="App.selectActivity('moderate')">
+                        <span class="activity-icon">🏃</span>
+                        <div class="activity-text"><div class="activity-name">中度活動</div><div class="activity-desc">每週運動 3-5 天</div></div>
+                    </button>
+                    <button class="activity-option" data-level="active" onclick="App.selectActivity('active')">
+                        <span class="activity-icon">💪</span>
+                        <div class="activity-text"><div class="activity-name">高度活動</div><div class="activity-desc">每週運動 6-7 天</div></div>
+                    </button>
+                    <button class="activity-option" data-level="very_active" onclick="App.selectActivity('very_active')">
+                        <span class="activity-icon">🔥</span>
+                        <div class="activity-text"><div class="activity-name">非常活躍</div><div class="activity-desc">高強度運動或體力工作</div></div>
+                    </button>
+                </div>
+            </div>
+
+            <div class="onboarding-step" data-step="4">
+                <h2>減肥目標</h2>
+                <p class="step-desc">選擇你的減重速度</p>
+                <div class="goal-list">
+                    <button class="goal-option" data-goal="maintain" onclick="App.selectGoal('maintain')">
+                        <span class="goal-icon">⚖️</span>
+                        <div class="goal-text"><div class="goal-name">維持體重</div><div class="goal-desc">TDEE 不增不減</div></div>
+                        <div class="goal-deficit" id="deficitMaintain">0 kcal</div>
+                    </button>
+                    <button class="goal-option" data-goal="slow" onclick="App.selectGoal('slow')">
+                        <span class="goal-icon">🐢</span>
+                        <div class="goal-text"><div class="goal-name">慢速減重</div><div class="goal-desc">每週約減 0.25 kg</div></div>
+                        <div class="goal-deficit" id="deficitSlow">-250 kcal</div>
+                    </button>
+                    <button class="goal-option selected" data-goal="moderate" onclick="App.selectGoal('moderate')">
+                        <span class="goal-icon">🎯</span>
+                        <div class="goal-text"><div class="goal-name">適度減重</div><div class="goal-desc">每週約減 0.5 kg（推薦）</div></div>
+                        <div class="goal-deficit" id="deficitModerate">-500 kcal</div>
+                    </button>
+                    <button class="goal-option" data-goal="fast" onclick="App.selectGoal('fast')">
+                        <span class="goal-icon">🚀</span>
+                        <div class="goal-text"><div class="goal-name">快速減重</div><div class="goal-desc">每週約減 0.75 kg</div></div>
+                        <div class="goal-deficit" id="deficitFast">-750 kcal</div>
+                    </button>
+                </div>
+                <div class="form-group" style="margin-top:20px">
+                    <label>Gemini API Key（選填，用於食物拍照辨識）</label>
+                    <input type="password" id="obApiKey" class="input-field" placeholder="輸入你的 API Key...">
+                </div>
+            </div>
+
+            <div class="onboarding-nav">
+                <button class="btn btn-secondary" id="obBack" onclick="App.obBack()" style="visibility:hidden;">
+                    <span class="material-symbols-rounded">arrow_back</span> 上一步
+                </button>
+                <button class="btn btn-primary" id="obNext" onclick="App.obNext()">
+                    下一步 <span class="material-symbols-rounded">arrow_forward</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== MAIN APP SCREEN ========== -->
+    <div id="mainScreen" class="screen" style="display:none;">
+        <!-- Cloud sync indicator -->
+        <div class="sync-bar" id="syncBar" style="display:none;">
+            <span class="material-symbols-rounded sync-icon">cloud_sync</span>
+            <span id="syncText">同步中...</span>
+        </div>
+
+        <div class="app-container" id="appContent">
+
+            <!-- Page: Dashboard -->
+            <div class="page active" id="pageDashboard">
+                <header class="app-header">
+                    <div class="header-left">
+                        <div class="logo">
+                            <span class="logo-icon">🔥</span>
+                            <span class="logo-text">FitBurn</span>
+                        </div>
+                    </div>
+                    <div class="header-center">
+                        <button class="btn-icon date-nav" onclick="App.prevDay()">
+                            <span class="material-symbols-rounded">chevron_left</span>
+                        </button>
+                        <div class="date-display" id="dateDisplay">今天</div>
+                        <button class="btn-icon date-nav" onclick="App.nextDay()">
+                            <span class="material-symbols-rounded">chevron_right</span>
+                        </button>
+                    </div>
+                    <div class="header-right">
+                        <button class="btn-icon" onclick="App.manualSync()" title="同步雲端" id="syncBtn">
+                            <span class="material-symbols-rounded">cloud_sync</span>
+                        </button>
+                    </div>
+                </header>
+
+                <div class="profile-banner" id="profileBanner">
+                    <div class="profile-info">
+                        <div class="profile-avatar" id="profileAvatar">👨</div>
+                        <div class="profile-details">
+                            <div class="profile-greeting" id="profileGreeting">Hi！</div>
+                            <div class="profile-stats" id="profileStats">BMR: -- | TDEE: --</div>
+                        </div>
+                    </div>
+                    <div class="profile-bmi" id="profileBMI">
+                        <div class="bmi-value">--</div>
+                        <div class="bmi-label">BMI</div>
+                    </div>
+                </div>
+
+                <section class="dashboard">
+                    <div class="ring-card">
+                        <div class="calorie-ring" id="calorieRing">
+                            <div class="ring-inner">
+                                <div class="ring-value" id="netCalories">0</div>
+                                <div class="ring-label">剩餘可攝取 kcal</div>
+                            </div>
+                        </div>
+                        <div class="ring-status" id="ringStatus">
+                            <span class="material-symbols-rounded">emoji_events</span>
+                            開始記錄今天的飲食和運動吧！
+                        </div>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stat-card stat-intake">
+                            <div class="stat-icon"><span class="material-symbols-rounded">restaurant</span></div>
+                            <div class="stat-info"><div class="stat-value" id="totalIntake">0</div><div class="stat-label">已攝取</div></div>
+                        </div>
+                        <div class="stat-card stat-burn">
+                            <div class="stat-icon"><span class="material-symbols-rounded">local_fire_department</span></div>
+                            <div class="stat-info"><div class="stat-value" id="totalBurn">0</div><div class="stat-label">已消耗</div></div>
+                        </div>
+                        <div class="stat-card stat-target">
+                            <div class="stat-icon"><span class="material-symbols-rounded">flag</span></div>
+                            <div class="stat-info"><div class="stat-value" id="targetDisplay">1800</div><div class="stat-label">每日目標</div></div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="quick-actions">
+                    <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none;" onchange="App.handleFoodPhoto(event)">
+                    <input type="file" id="galleryInput" accept="image/*" style="display:none;" onchange="App.handleFoodPhoto(event)">
+                    <button class="action-btn action-camera" onclick="document.getElementById('cameraInput').click()">
+                        <span class="material-symbols-rounded">photo_camera</span><span>拍照分析</span>
+                    </button>
+                    <button class="action-btn action-gallery" onclick="document.getElementById('galleryInput').click()">
+                        <span class="material-symbols-rounded">image</span><span>相簿選圖</span>
+                    </button>
+                    <button class="action-btn action-manual" onclick="App.openManualFood()">
+                        <span class="material-symbols-rounded">edit_note</span><span>手動輸入</span>
+                    </button>
+                    <button class="action-btn action-exercise" onclick="App.openExercise()">
+                        <span class="material-symbols-rounded">fitness_center</span><span>新增運動</span>
+                    </button>
+                </section>
+
+                <section class="records-section">
+                    <div class="section-header">
+                        <h2><span class="material-symbols-rounded">restaurant</span> 今日飲食</h2>
+                        <span class="section-badge" id="foodCount">0 筆</span>
+                    </div>
+                    <div class="records-list" id="foodList">
+                        <div class="empty-state"><span class="material-symbols-rounded">no_meals</span><p>還沒有紀錄，拍張食物照片開始吧！</p></div>
+                    </div>
+                </section>
+
+                <section class="records-section">
+                    <div class="section-header">
+                        <h2><span class="material-symbols-rounded">fitness_center</span> 今日運動</h2>
+                        <span class="section-badge" id="exerciseCount">0 筆</span>
+                    </div>
+                    <div class="records-list" id="exerciseList">
+                        <div class="empty-state"><span class="material-symbols-rounded">directions_run</span><p>記錄你的運動，看看消耗了多少熱量！</p></div>
+                    </div>
+                </section>
+
+                <div class="motivation-banner" id="motivationalQuote"></div>
+            </div>
+
+            <!-- Page: Charts -->
+            <div class="page" id="pageCharts">
+                <div class="page-title"><h1><span class="material-symbols-rounded">insights</span> 數據分析</h1></div>
+                <div class="info-card-grid">
+                    <div class="info-card info-bmr"><div class="info-card-icon">🧬</div><div class="info-card-value" id="chartBMR">--</div><div class="info-card-label">BMR 基礎代謝</div></div>
+                    <div class="info-card info-tdee"><div class="info-card-icon">⚡</div><div class="info-card-value" id="chartTDEE">--</div><div class="info-card-label">TDEE 總消耗</div></div>
+                    <div class="info-card info-bmi"><div class="info-card-icon">📏</div><div class="info-card-value" id="chartBMI">--</div><div class="info-card-label" id="chartBMILabel">BMI</div></div>
+                    <div class="info-card info-goal"><div class="info-card-icon">🎯</div><div class="info-card-value" id="chartGoal">--</div><div class="info-card-label">每日目標</div></div>
+                </div>
+                <section class="chart-section">
+                    <div class="section-header"><h2><span class="material-symbols-rounded">show_chart</span> 7日趨勢</h2></div>
+                    <div class="chart-container"><canvas id="trendChart"></canvas></div>
+                </section>
+                <section class="chart-section">
+                    <div class="section-header">
+                        <h2><span class="material-symbols-rounded">monitor_weight</span> 體重紀錄</h2>
+                        <button class="btn btn-sm" onclick="App.openWeightLog()"><span class="material-symbols-rounded">add</span> 記錄</button>
+                    </div>
+                    <div class="chart-container"><canvas id="weightChart"></canvas></div>
+                </section>
+            </div>
+
+            <!-- Page: History (NEW) -->
+            <div class="page" id="pageHistory">
+                <div class="page-title"><h1><span class="material-symbols-rounded">history</span> 歷史紀錄</h1></div>
+
+                <!-- Encouragement Card -->
+                <div class="encouragement-card" id="encouragementCard">
+                    <div class="encouragement-header">
+                        <span class="encouragement-emoji">🌟</span>
+                        <h3>你的進度</h3>
+                    </div>
+                    <div class="encouragement-messages" id="encouragementMessages">
+                        <p class="pulse">讀取中...</p>
+                    </div>
+                </div>
+
+                <!-- Calendar strip -->
+                <div class="history-nav">
+                    <button class="btn btn-sm" onclick="App.loadMoreHistory()">
+                        <span class="material-symbols-rounded">expand_more</span> 載入更多
+                    </button>
+                </div>
+
+                <div class="history-list" id="historyList">
+                    <div class="empty-state"><span class="material-symbols-rounded">event_note</span><p>開始記錄後就能看到歷史紀錄</p></div>
+                </div>
+            </div>
+
+            <!-- Page: Profile / Settings -->
+            <div class="page" id="pageProfile">
+                <div class="page-title"><h1><span class="material-symbols-rounded">person</span> 個人檔案</h1></div>
+
+                <!-- User info card -->
+                <div class="profile-card-full">
+                    <div class="profile-card-avatar" id="profileCardAvatar">👨</div>
+                    <div class="profile-card-info">
+                        <div class="profile-card-name" id="profileCardName">使用者</div>
+                        <div class="profile-card-sub" id="profileCardSub">設定你的個人資料</div>
+                    </div>
+                    <div class="cloud-badge" id="cloudBadge">
+                        <span class="material-symbols-rounded">cloud_done</span>
+                        <span>已同步</span>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <div class="settings-section-title">身體數據</div>
+                    <div class="settings-item" onclick="App.editField('gender')">
+                        <span class="material-symbols-rounded">wc</span>
+                        <div class="settings-item-text">性別</div>
+                        <div class="settings-item-value" id="settingGenderDisplay">--</div>
+                        <span class="material-symbols-rounded settings-arrow">chevron_right</span>
+                    </div>
+                    <div class="settings-item" onclick="App.editField('age')">
+                        <span class="material-symbols-rounded">cake</span>
+                        <div class="settings-item-text">年齡</div>
+                        <div class="settings-item-value" id="settingAgeDisplay">--</div>
+                        <span class="material-symbols-rounded settings-arrow">chevron_right</span>
+                    </div>
+                    <div class="settings-item" onclick="App.editField('height')">
+                        <span class="material-symbols-rounded">height</span>
+                        <div class="settings-item-text">身高</div>
+                        <div class="settings-item-value" id="settingHeightDisplay">--</div>
+                        <span class="material-symbols-rounded settings-arrow">chevron_right</span>
+                    </div>
+                    <div class="settings-item" onclick="App.editField('weight')">
+                        <span class="material-symbols-rounded">monitor_weight</span>
+                        <div class="settings-item-text">體重</div>
+                        <div class="settings-item-value" id="settingWeightDisplay">--</div>
+                        <span class="material-symbols-rounded settings-arrow">chevron_right</span>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <div class="settings-section-title">目標設定</div>
+                    <div class="settings-item" onclick="App.editField('activity')">
+                        <span class="material-symbols-rounded">directions_run</span>
+                        <div class="settings-item-text">活動量</div>
+                        <div class="settings-item-value" id="settingActivityDisplay">--</div>
+                        <span class="material-symbols-rounded settings-arrow">chevron_right</span>
+                    </div>
+                    <div class="settings-item" onclick="App.editField('goal')">
+                        <span class="material-symbols-rounded">flag</span>
+                        <div class="settings-item-text">減重目標</div>
+                        <div class="settings-item-value" id="settingGoalDisplay">--</div>
+                        <span class="material-symbols-rounded settings-arrow">chevron_right</span>
+                    </div>
+                    <div class="settings-item" onclick="App.editField('targetCalories')">
+                        <span class="material-symbols-rounded">local_fire_department</span>
+                        <div class="settings-item-text">每日目標熱量</div>
+                        <div class="settings-item-value" id="settingTargetDisplay">--</div>
+                        <span class="material-symbols-rounded settings-arrow">chevron_right</span>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <div class="settings-section-title">帳號與雲端</div>
+                    <div class="settings-item" onclick="App.editField('scriptUrl')">
+                        <span class="material-symbols-rounded">cloud</span>
+                        <div class="settings-item-text">雲端同步網址</div>
+                        <div class="settings-item-value" id="settingScriptUrlDisplay">未設定</div>
+                        <span class="material-symbols-rounded settings-arrow">chevron_right</span>
+                    </div>
+                    <div class="settings-item" onclick="App.editField('apiKey')">
+                        <span class="material-symbols-rounded">key</span>
+                        <div class="settings-item-text">Gemini API Key</div>
+                        <div class="settings-item-value" id="settingApiKeyDisplay">未設定</div>
+                        <span class="material-symbols-rounded settings-arrow">chevron_right</span>
+                    </div>
+                    <div class="settings-item" onclick="App.manualSync()">
+                        <span class="material-symbols-rounded">sync</span>
+                        <div class="settings-item-text">手動同步到雲端</div>
+                        <div class="settings-item-value" id="settingLastSync">--</div>
+                        <span class="material-symbols-rounded settings-arrow">chevron_right</span>
+                    </div>
+                    <div class="settings-item" onclick="App.logout()">
+                        <span class="material-symbols-rounded">logout</span>
+                        <div class="settings-item-text">登出</div>
+                        <div class="settings-item-value"></div>
+                        <span class="material-symbols-rounded settings-arrow">chevron_right</span>
+                    </div>
+                    <div class="settings-item danger" onclick="App.resetData()">
+                        <span class="material-symbols-rounded">delete_forever</span>
+                        <div class="settings-item-text">清除所有本地資料</div>
+                        <div class="settings-item-value"></div>
+                        <span class="material-symbols-rounded settings-arrow">chevron_right</span>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <div class="info-box-title">📖 熱量計算說明</div>
+                    <p><strong>BMR（基礎代謝率）</strong>：身體在完全靜止時維持生命所需的最低熱量。</p>
+                    <p><strong>TDEE（每日總消耗熱量）</strong>：BMR × 活動係數，代表你每天實際消耗的總熱量。</p>
+                    <p><strong>目標熱量</strong> = TDEE - 赤字。若要每週減 0.5 kg，需每日赤字約 500 kcal。</p>
+                    <p>公式：Mifflin-St Jeor</p>
+                    <ul>
+                        <li>男：10×體重 + 6.25×身高 - 5×年齡 + 5</li>
+                        <li>女：10×體重 + 6.25×身高 - 5×年齡 - 161</li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Bottom Navigation - now 5 items with history -->
+        <nav class="bottom-nav" id="bottomNav">
+            <button class="nav-item active" data-page="pageDashboard" onclick="App.switchPage('pageDashboard')">
+                <span class="material-symbols-rounded">home</span><span class="nav-label">首頁</span>
+            </button>
+            <button class="nav-item" data-page="pageCharts" onclick="App.switchPage('pageCharts')">
+                <span class="material-symbols-rounded">insights</span><span class="nav-label">數據</span>
+            </button>
+            <button class="nav-item nav-fab" onclick="App.openQuickAdd()">
+                <span class="material-symbols-rounded">add</span>
+            </button>
+            <button class="nav-item" data-page="pageHistory" onclick="App.switchPage('pageHistory')">
+                <span class="material-symbols-rounded">history</span><span class="nav-label">歷史</span>
+            </button>
+            <button class="nav-item" data-page="pageProfile" onclick="App.switchPage('pageProfile')">
+                <span class="material-symbols-rounded">person</span><span class="nav-label">我的</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- ========== MODALS ========== -->
+
+    <!-- Quick Add Sheet -->
+    <div id="quickAddSheet" class="bottom-sheet-overlay" style="display:none;">
+        <div class="bottom-sheet-backdrop" onclick="App.closeQuickAdd()"></div>
+        <div class="bottom-sheet">
+            <div class="sheet-handle"></div>
+            <div class="sheet-title">快速新增</div>
+            <div class="sheet-grid">
+                <button class="sheet-action" onclick="App.closeQuickAdd();document.getElementById('cameraInput').click()">
+                    <div class="sheet-icon si-green"><span class="material-symbols-rounded">photo_camera</span></div><span>拍照分析</span>
+                </button>
+                <button class="sheet-action" onclick="App.closeQuickAdd();document.getElementById('galleryInput').click()">
+                    <div class="sheet-icon si-purple"><span class="material-symbols-rounded">image</span></div><span>相簿選圖</span>
+                </button>
+                <button class="sheet-action" onclick="App.closeQuickAdd();App.openManualFood()">
+                    <div class="sheet-icon si-orange"><span class="material-symbols-rounded">edit_note</span></div><span>手動輸入</span>
+                </button>
+                <button class="sheet-action" onclick="App.closeQuickAdd();App.openExercise()">
+                    <div class="sheet-icon si-yellow"><span class="material-symbols-rounded">fitness_center</span></div><span>新增運動</span>
+                </button>
+                <button class="sheet-action" onclick="App.closeQuickAdd();App.openWeightLog()">
+                    <div class="sheet-icon si-cyan"><span class="material-symbols-rounded">monitor_weight</span></div><span>記錄體重</span>
+                </button>
+                <button class="sheet-action" onclick="App.closeQuickAdd();App.openWaterLog()">
+                    <div class="sheet-icon si-blue"><span class="material-symbols-rounded">water_drop</span></div><span>喝水紀錄</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Generic Edit Modal -->
+    <div id="editModal" class="modal-overlay" style="display:none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="editModalTitle">編輯</h2>
+                <button class="btn-icon" onclick="App.closeEditModal()"><span class="material-symbols-rounded">close</span></button>
+            </div>
+            <div id="editModalContent"></div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="App.closeEditModal()">取消</button>
+                <button class="btn btn-primary" id="editModalSave" onclick="App.saveEditModal()">
+                    <span class="material-symbols-rounded">check</span> 儲存
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Food Analysis Modal -->
+    <div id="foodAnalysisModal" class="modal-overlay" style="display:none;">
+        <div class="modal modal-wide">
+            <div class="modal-header">
+                <h2><span class="material-symbols-rounded">restaurant</span> 食物分析結果</h2>
+                <button class="btn-icon" onclick="App.closeFoodAnalysis()"><span class="material-symbols-rounded">close</span></button>
+            </div>
+            <div id="foodAnalysisContent" class="food-analysis-content"></div>
+        </div>
+    </div>
+
+    <!-- Manual Food Modal -->
+    <div id="manualFoodModal" class="modal-overlay" style="display:none;">
+        <div class="modal">
+            <div class="modal-icon">🍱</div>
+            <h2>手動新增食物</h2>
+            <div class="form-group"><label>食物名稱</label><input type="text" id="manualFoodName" class="input-field" placeholder="例如：雞胸肉沙拉"></div>
+            <div class="form-group"><label>熱量 (kcal)</label><input type="number" id="manualFoodCalories" class="input-field" placeholder="350" min="0" max="9999"></div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="App.closeManualFood()">取消</button>
+                <button class="btn btn-primary" onclick="App.addManualFood()"><span class="material-symbols-rounded">add</span> 新增</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Exercise Modal -->
+    <div id="exerciseModal" class="modal-overlay" style="display:none;">
+        <div class="modal">
+            <div class="modal-icon">💪</div>
+            <h2>新增運動紀錄</h2>
+            <div class="form-group"><label>運動類型</label>
+                <select id="exerciseType" class="input-field">
+                    <option value="running">🏃 跑步</option><option value="walking">🚶 走路</option>
+                    <option value="cycling">🚴 騎自行車</option><option value="swimming">🏊 游泳</option>
+                    <option value="hiit">🔥 HIIT 高強度間歇</option><option value="weight">🏋️ 重量訓練</option>
+                    <option value="yoga">🧘 瑜伽</option><option value="jump_rope">⏭️ 跳繩</option>
+                    <option value="dance">💃 跳舞</option><option value="basketball">🏀 籃球</option>
+                    <option value="badminton">🏸 羽毛球</option><option value="tennis">🎾 網球</option>
+                    <option value="hiking">🥾 爬山</option><option value="stair">🪜 爬樓梯</option>
+                    <option value="elliptical">🏃‍♂️ 橢圓機</option><option value="rowing">🚣 划船機</option>
+                </select>
+            </div>
+            <div class="form-group"><label>運動時長 (分鐘)</label><input type="number" id="exerciseDuration" class="input-field" placeholder="30" min="1" max="600"></div>
+            <div class="form-group" id="exerciseDistanceGroup"><label>距離 (公里，選填)</label><input type="number" id="exerciseDistance" class="input-field" placeholder="5.0" min="0" max="200" step="0.1"></div>
+            <div class="calorie-preview" id="exerciseCalPreview">
+                <span class="material-symbols-rounded">local_fire_department</span>
+                預計消耗：<strong id="exerciseCalValue">0</strong> kcal
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="App.closeExercise()">取消</button>
+                <button class="btn btn-primary" onclick="App.addExercise()"><span class="material-symbols-rounded">add</span> 新增</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Weight Log Modal -->
+    <div id="weightLogModal" class="modal-overlay" style="display:none;">
+        <div class="modal">
+            <div class="modal-icon">⚖️</div>
+            <h2>記錄今日體重</h2>
+            <div class="form-group"><label>體重 (kg)</label><div class="input-with-unit"><input type="number" id="weightLogInput" class="input-field" placeholder="70.0" min="30" max="300" step="0.1"><span class="input-unit">kg</span></div></div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="App.closeWeightLog()">取消</button>
+                <button class="btn btn-primary" onclick="App.saveWeightLog()"><span class="material-symbols-rounded">check</span> 儲存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Water Log Modal -->
+    <div id="waterLogModal" class="modal-overlay" style="display:none;">
+        <div class="modal">
+            <div class="modal-icon">💧</div>
+            <h2>喝水紀錄</h2>
+            <div class="water-quick-btns">
+                <button class="water-btn" onclick="App.addWater(250)">🥤 250ml</button>
+                <button class="water-btn" onclick="App.addWater(350)">🫗 350ml</button>
+                <button class="water-btn" onclick="App.addWater(500)">🍶 500ml</button>
+                <button class="water-btn" onclick="App.addWater(600)">🧴 600ml</button>
+            </div>
+            <div class="water-total" id="waterTotal">今日已喝：0 ml</div>
+            <div class="water-bar-bg"><div class="water-bar-fill" id="waterBarFill" style="width:0%"></div></div>
+            <div class="water-target-label">目標：2000 ml</div>
+            <div class="modal-actions"><button class="btn btn-secondary" onclick="App.closeWaterLog()">關閉</button></div>
+        </div>
+    </div>
+
+    <!-- Setup Guide Modal -->
+    <div id="setupGuideModal" class="modal-overlay" style="display:none;">
+        <div class="modal modal-wide">
+            <div class="modal-header">
+                <h2><span class="material-symbols-rounded">help</span> 雲端部署教學</h2>
+                <button class="btn-icon" onclick="document.getElementById('setupGuideModal').style.display='none'"><span class="material-symbols-rounded">close</span></button>
+            </div>
+            <div class="setup-guide-content">
+                <div class="guide-step">
+                    <div class="guide-step-num">1</div>
+                    <div class="guide-step-text">
+                        <strong>開啟 Google Sheets</strong>
+                        <p>前往你的 <a href="https://docs.google.com/spreadsheets/d/1hIdFl-N1k57CbuXPT4nU8fwkDlhM9e9vNBKKH88tID0/edit" target="_blank">Google Sheets</a></p>
+                    </div>
+                </div>
+                <div class="guide-step">
+                    <div class="guide-step-num">2</div>
+                    <div class="guide-step-text">
+                        <strong>開啟 Apps Script</strong>
+                        <p>點選「擴充功能」→「Apps Script」</p>
+                    </div>
+                </div>
+                <div class="guide-step">
+                    <div class="guide-step-num">3</div>
+                    <div class="guide-step-text">
+                        <strong>貼上程式碼</strong>
+                        <p>將 <code>google_apps_script.js</code> 的全部內容複製貼上到編輯器</p>
+                    </div>
+                </div>
+                <div class="guide-step">
+                    <div class="guide-step-num">4</div>
+                    <div class="guide-step-text">
+                        <strong>部署為網頁應用程式</strong>
+                        <p>點選「部署」→「新增部署」→ 類型選「網頁應用程式」→「誰可以存取」選「任何人」→ 部署</p>
+                    </div>
+                </div>
+                <div class="guide-step">
+                    <div class="guide-step-num">5</div>
+                    <div class="guide-step-text">
+                        <strong>複製網址</strong>
+                        <p>複製產生的部署網址，貼到 FitBurn 登入畫面的「雲端同步網址」欄位</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Day Detail Modal -->
+    <div id="historyDetailModal" class="modal-overlay" style="display:none;">
+        <div class="modal modal-wide">
+            <div class="modal-header">
+                <h2 id="historyDetailTitle"><span class="material-symbols-rounded">calendar_today</span> 日期</h2>
+                <button class="btn-icon" onclick="document.getElementById('historyDetailModal').style.display='none'"><span class="material-symbols-rounded">close</span></button>
+            </div>
+            <div id="historyDetailContent" class="history-detail-content"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
